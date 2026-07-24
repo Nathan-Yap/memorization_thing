@@ -137,6 +137,34 @@
 
   #bank-count{ font-size: 0.8rem; color: var(--ink-soft); }
 
+  /* ---- practice sets (file management) ---- */
+  .sets-box{
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 14px 14px 4px;
+    margin-bottom: 20px;
+    background: rgba(255,253,248,0.5);
+  }
+  .sets-box h3{
+    margin: 0 0 4px;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight:600;
+  }
+  .sets-box select, .sets-box input[type="text"]{
+    padding: 9px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background:#fffdf8;
+    color: var(--ink);
+    font-size: 0.85rem;
+  }
+  .sets-box select{ min-width: 160px; flex: 1; }
+  .sets-box input[type="text"]{ flex: 1; min-width: 120px; }
+  .sets-box button{ font-size: 0.82rem; padding: 9px 12px; }
+
   /* ---- practice panel ---- */
   #practice-panel{ display:none; }
   #summary-panel{ display:none; }
@@ -294,6 +322,44 @@
 
   <section class="panel" id="setup-panel">
     <h2>Character bank</h2>
+
+    <div class="sets-box" id="builtin-sets-box">
+      <h3>Built-in sets (from this site)</h3>
+      <div class="row" style="margin-top:0;">
+        <select id="builtin-select"></select>
+        <button class="secondary" id="load-builtin-btn">Load</button>
+      </div>
+      <p class="hint" id="builtin-status">Looking for built-in sets…</p>
+    </div>
+
+    <div class="sets-box" id="sets-box">
+      <h3>Practice sets (saved as .txt files)</h3>
+
+      <div class="row" style="margin-top:0;">
+        <button class="secondary" id="connect-folder-btn">Connect folder…</button>
+        <span class="hint" id="folder-status" style="margin:0;">Not connected.</span>
+      </div>
+
+      <div class="row">
+        <select id="set-select"></select>
+        <button class="secondary" id="load-set-btn">Load</button>
+        <button class="secondary" id="delete-set-btn">Delete</button>
+      </div>
+
+      <div class="row">
+        <input type="text" id="set-name-input" placeholder="set name (e.g. hsk1)" />
+        <button class="primary" id="save-set-btn">Save to folder</button>
+      </div>
+
+      <div class="row">
+        <button class="secondary" id="import-btn">Import .txt…</button>
+        <button class="secondary" id="export-btn">Export as .txt</button>
+        <input type="file" id="import-file-input" accept=".txt,text/plain" style="display:none;">
+      </div>
+
+      <p class="hint"><strong>Your own local sets:</strong> connect a folder on your device (e.g. the folder this page lives in) once per browser to load, save, and delete named <code>.txt</code> sets directly — each file uses the same <code>character, pinyin, meaning</code> format as the box below. Works in Chrome/Edge. In other browsers (Safari, Firefox), use Import/Export instead — export a <code>.txt</code> file, then drop it into a folder yourself.</p>
+    </div>
+
     <label for="bank-input">One entry per line: <code>character, pinyin, meaning</code> (pinyin and meaning are optional)</label>
     <textarea id="bank-input" spellcheck="false" placeholder="你好, nǐ hǎo, hello
 谢谢, xièxiè, thank you
@@ -369,7 +435,7 @@
     </div>
   </section>
 
-  <footer>Runs entirely in your browser — nothing is sent anywhere. Your bank is saved locally on this device.</footer>
+  <footer>Runs entirely in your browser — nothing is sent anywhere. Practice sets you connect or save stay as plain <code>.txt</code> files on your device; the current bank is also cached locally in this browser.</footer>
 </div>
 
 <script>
@@ -404,6 +470,21 @@
   const statCorrect = document.getElementById("stat-correct");
   const statAvg = document.getElementById("stat-avg");
   const summaryTableBody = document.getElementById("summary-table-body");
+
+  const connectFolderBtn = document.getElementById("connect-folder-btn");
+  const folderStatusEl = document.getElementById("folder-status");
+  const setSelect = document.getElementById("set-select");
+  const loadSetBtn = document.getElementById("load-set-btn");
+  const deleteSetBtn = document.getElementById("delete-set-btn");
+  const setNameInput = document.getElementById("set-name-input");
+  const saveSetBtn = document.getElementById("save-set-btn");
+  const importBtn = document.getElementById("import-btn");
+  const exportBtn = document.getElementById("export-btn");
+  const importFileInput = document.getElementById("import-file-input");
+
+  const builtinSelect = document.getElementById("builtin-select");
+  const loadBuiltinBtn = document.getElementById("load-builtin-btn");
+  const builtinStatus = document.getElementById("builtin-status");
 
   const SAMPLE = `拉, lā, to pull
 蛇, shé, snake
@@ -533,6 +614,299 @@
   const saved = localStorage.getItem(STORAGE_KEY);
   bankInput.value = saved ? saved : SAMPLE;
   updateBankCount();
+
+  // ---------- Practice sets: saved as .txt files ----------
+  const supportsFS = "showDirectoryPicker" in window;
+  const FS_DB_NAME = "hanzi-practice-fs";
+  const FS_DB_STORE = "handles";
+  const FS_DIR_KEY = "practice-dir";
+
+  let dirHandle = null;
+
+  function idbOpen(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(FS_DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(FS_DB_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(key, val){
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(FS_DB_STORE, "readwrite");
+      tx.objectStore(FS_DB_STORE).put(val, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbGet(key){
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(FS_DB_STORE, "readonly");
+      const req = tx.objectStore(FS_DB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function verifyPermission(handle, mode){
+    const opts = { mode };
+    if ((await handle.queryPermission(opts)) === "granted") return true;
+    if ((await handle.requestPermission(opts)) === "granted") return true;
+    return false;
+  }
+
+  async function refreshSetList(){
+    if (!dirHandle) return;
+    const names = [];
+    for await (const [name, entry] of dirHandle.entries()) {
+      if (entry.kind === "file" && name.toLowerCase().endsWith(".txt")) {
+        names.push(name);
+      }
+    }
+    names.sort((a, b) => a.localeCompare(b));
+    setSelect.innerHTML = "";
+    if (names.length === 0) {
+      const opt = document.createElement("option");
+      opt.textContent = "(no .txt sets found in this folder)";
+      opt.disabled = true;
+      setSelect.appendChild(opt);
+    } else {
+      names.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        setSelect.appendChild(opt);
+      });
+    }
+  }
+
+  if (!supportsFS) {
+    saveSetBtn.disabled = true;
+    deleteSetBtn.disabled = true;
+    loadSetBtn.disabled = true;
+    setSelect.disabled = true;
+    connectFolderBtn.disabled = true;
+    folderStatusEl.textContent = "Folder access isn't supported in this browser (try Chrome or Edge). Use Import / Export instead.";
+  } else {
+    connectFolderBtn.addEventListener("click", async () => {
+      try {
+        dirHandle = await window.showDirectoryPicker();
+        const ok = await verifyPermission(dirHandle, "readwrite");
+        if (!ok) throw new Error("permission denied");
+        await idbSet(FS_DIR_KEY, dirHandle);
+        folderStatusEl.textContent = 'Connected: "' + dirHandle.name + '/"';
+        await refreshSetList();
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          folderStatusEl.textContent = "Could not access folder: " + err.message;
+        }
+      }
+    });
+
+    // Try to silently restore a previously-connected folder.
+    (async () => {
+      try {
+        const saved = await idbGet(FS_DIR_KEY);
+        if (saved) {
+          const already = await saved.queryPermission({ mode: "readwrite" });
+          if (already === "granted") {
+            dirHandle = saved;
+            folderStatusEl.textContent = 'Connected: "' + dirHandle.name + '/"';
+            await refreshSetList();
+          } else {
+            folderStatusEl.textContent = 'Folder "' + saved.name + '" was connected before — click "Connect folder…" to reconnect.';
+          }
+        }
+      } catch (err) { /* no saved handle yet, ignore */ }
+    })();
+  }
+
+  loadSetBtn.addEventListener("click", async () => {
+    if (!dirHandle || !setSelect.value) return;
+    try {
+      const fileHandle = await dirHandle.getFileHandle(setSelect.value);
+      const file = await fileHandle.getFile();
+      bankInput.value = await file.text();
+      setNameInput.value = setSelect.value.replace(/\.txt$/i, "");
+      updateBankCount();
+      saveStatus.textContent = 'Loaded "' + setSelect.value + '"';
+      setTimeout(() => saveStatus.textContent = "", 2000);
+    } catch (err) {
+      saveStatus.textContent = "Could not load set: " + err.message;
+    }
+  });
+
+  saveSetBtn.addEventListener("click", async () => {
+    if (!dirHandle) return;
+    let name = setNameInput.value.trim();
+    if (!name) { saveStatus.textContent = "Enter a set name first."; return; }
+    if (!name.toLowerCase().endsWith(".txt")) name += ".txt";
+    try {
+      const ok = await verifyPermission(dirHandle, "readwrite");
+      if (!ok) throw new Error("permission denied");
+      const fileHandle = await dirHandle.getFileHandle(name, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(bankInput.value);
+      await writable.close();
+      await refreshSetList();
+      setSelect.value = name;
+      saveStatus.textContent = 'Saved "' + name + '" ✓';
+      setTimeout(() => saveStatus.textContent = "", 2000);
+    } catch (err) {
+      saveStatus.textContent = "Could not save set: " + err.message;
+    }
+  });
+
+  deleteSetBtn.addEventListener("click", async () => {
+    if (!dirHandle || !setSelect.value) return;
+    const name = setSelect.value;
+    if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+    try {
+      await dirHandle.removeEntry(name);
+      await refreshSetList();
+      saveStatus.textContent = 'Deleted "' + name + '"';
+      setTimeout(() => saveStatus.textContent = "", 2000);
+    } catch (err) {
+      saveStatus.textContent = "Could not delete set: " + err.message;
+    }
+  });
+
+  importBtn.addEventListener("click", () => importFileInput.click());
+  importFileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    bankInput.value = await file.text();
+    setNameInput.value = file.name.replace(/\.txt$/i, "");
+    updateBankCount();
+    saveStatus.textContent = 'Imported "' + file.name + '"';
+    setTimeout(() => saveStatus.textContent = "", 2000);
+    e.target.value = "";
+  });
+
+  exportBtn.addEventListener("click", () => {
+    let name = setNameInput.value.trim() || "practice-set";
+    if (!name.toLowerCase().endsWith(".txt")) name += ".txt";
+    const blob = new Blob([bankInput.value], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Built-in sets: .txt files committed to this site's repo ----------
+  // Folder (relative to this page) where built-in sets live. Just drop a new
+  // "yourset.txt" in there (same format as the box above) and commit/push —
+  // on GitHub Pages it's picked up automatically, no other edits needed.
+  const SETS_DIR = "sets";
+
+  let builtinSets = []; // [{ name, url }]
+
+  function detectGithubRepo(){
+    const host = location.hostname;
+    if (!host.endsWith(".github.io")) return null;
+    const owner = host.split(".")[0];
+    const segments = location.pathname.split("/").filter(Boolean);
+    const candidates = [];
+    if (segments.length > 0) candidates.push(segments[0]); // project page: owner.github.io/repo/...
+    candidates.push(owner + ".github.io"); // user/org page: served from repo named owner.github.io
+    return { owner, candidates: [...new Set(candidates)] };
+  }
+
+  async function fetchGithubSets(owner, repo){
+    for (const branch of ["main", "master"]) {
+      try {
+        const res = await fetch(
+          "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + SETS_DIR + "?ref=" + branch,
+          { headers: { Accept: "application/vnd.github+json" } }
+        );
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!Array.isArray(data)) continue;
+        return data
+          .filter(f => f.type === "file" && f.name.toLowerCase().endsWith(".txt"))
+          .map(f => ({ name: f.name, url: f.download_url }));
+      } catch (err) { /* try next branch */ }
+    }
+    return null; // no repo/branch/folder combo worked
+  }
+
+  async function fetchManifestSets(){
+    try {
+      const res = await fetch(SETS_DIR + "/manifest.json", { cache: "no-store" });
+      if (!res.ok) return null;
+      const names = await res.json();
+      if (!Array.isArray(names)) return null;
+      return names.map(n => ({ name: n, url: SETS_DIR + "/" + n }));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  async function loadBuiltinSetList(){
+    let entries = null;
+
+    const repoInfo = detectGithubRepo();
+    if (repoInfo) {
+      for (const repo of repoInfo.candidates) {
+        entries = await fetchGithubSets(repoInfo.owner, repo);
+        if (entries !== null) break;
+      }
+    }
+
+    if (entries === null) {
+      entries = await fetchManifestSets();
+    }
+
+    builtinSets = entries || [];
+    builtinSelect.innerHTML = "";
+
+    if (builtinSets.length === 0) {
+      const opt = document.createElement("option");
+      opt.textContent = "(none found)";
+      opt.disabled = true;
+      builtinSelect.appendChild(opt);
+      loadBuiltinBtn.disabled = true;
+      builtinStatus.textContent = entries === null
+        ? 'No built-in sets found. Add a "' + SETS_DIR + '/" folder with .txt files next to this page and commit — on GitHub Pages they\'ll show up automatically. On other hosts, also add "' + SETS_DIR + '/manifest.json" listing the filenames, e.g. ["hsk1.txt"].'
+        : "No .txt sets in the \"" + SETS_DIR + "/\" folder yet.";
+    } else {
+      builtinSets.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.url;
+        opt.textContent = s.name;
+        builtinSelect.appendChild(opt);
+      });
+      loadBuiltinBtn.disabled = false;
+      builtinStatus.textContent = builtinSets.length + " set" + (builtinSets.length === 1 ? "" : "s") + " found in \"" + SETS_DIR + "/\".";
+    }
+  }
+
+  loadBuiltinBtn.addEventListener("click", async () => {
+    const url = builtinSelect.value;
+    const label = builtinSelect.options[builtinSelect.selectedIndex]
+      ? builtinSelect.options[builtinSelect.selectedIndex].textContent
+      : "";
+    if (!url) return;
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      bankInput.value = await res.text();
+      setNameInput.value = label.replace(/\.txt$/i, "");
+      updateBankCount();
+      saveStatus.textContent = 'Loaded "' + label + '"';
+      setTimeout(() => saveStatus.textContent = "", 2000);
+    } catch (err) {
+      saveStatus.textContent = "Could not load built-in set: " + err.message;
+    }
+  });
+
+  loadBuiltinSetList();
 
   function shuffle(arr){
     const a = arr.slice();
