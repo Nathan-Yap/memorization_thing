@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字帖 · Hanzi Practice</title>
+<style>
+  :root{
+    --paper:#f6f1e3;
+    --paper-2:#efe4cd;
+    --ink:#241f19;
+    --ink-soft:#5a4e3f;
+    --seal:#b23a2e;
+    --seal-dark:#8a2c22;
+    --gold:#b8902f;
+    --line:#cabe9f;
+    --grid:#c98a80;
+    --success:#3f7a4d;
+    --success-bg:#e3efe3;
+    --danger:#b23a2e;
+    --danger-bg:#f6e5e1;
+    --shadow: 0 2px 10px rgba(36,31,25,0.08);
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(184,144,47,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(178,58,46,0.05), transparent 40%);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display:flex;
+    justify-content:center;
+    padding: 32px 16px 80px;
+  }
+
+  #app{ width:100%; max-width:640px; }
+
+  header{ text-align:center; margin-bottom:28px; }
+
+  header h1{
+    font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    font-size: 2.1rem;
+    letter-spacing: 0.08em;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  header h1 .accent{ color: var(--seal); }
+
+  header p{
+    margin:0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+  }
+
+  .panel{
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+
+  .panel h2{
+    font-family: "Noto Serif SC", "Songti SC", serif;
+    font-size: 1.05rem;
+    margin: 0 0 12px;
+    color: var(--ink);
+    letter-spacing: 0.03em;
+  }
+
+  label{ display:block; font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 6px; }
+
+  textarea{
+    width:100%;
+    min-height: 160px;
+    resize: vertical;
+    padding: 12px;
+    font-family: "Noto Serif SC", "Songti SC", serif, monospace;
+    font-size: 0.95rem;
+    line-height:1.6;
+    border:1px solid var(--line);
+    border-radius: 4px;
+    background: #fffdf8;
+    color: var(--ink);
+  }
+  textarea:focus, input:focus, select:focus, button:focus-visible{
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .hint{ font-size: 0.78rem; color: var(--ink-soft); margin-top: 8px; line-height:1.5; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px; align-items:center; }
+
+  select{
+    padding: 9px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background:#fffdf8;
+    color: var(--ink);
+    font-size: 0.85rem;
+  }
+
+  button{
+    font-family: inherit;
+    font-size: 0.88rem;
+    padding: 10px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    cursor:pointer;
+    letter-spacing: 0.02em;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+  button:hover{ opacity:0.88; }
+  button:active{ transform: translateY(1px); }
+
+  button.secondary{
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  button.primary{
+    background: var(--seal);
+    border-color: var(--seal-dark);
+    color: #fdf6ee;
+  }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  #bank-count{ font-size: 0.8rem; color: var(--ink-soft); }
+
+  /* ---- practice panel ---- */
+  #practice-panel{ display:none; }
+  #summary-panel{ display:none; }
+
+  .status-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .status-bar .round-label{ color: var(--seal); font-weight:600; }
+  .status-bar .timers{ display:flex; gap:14px; font-variant-numeric: tabular-nums; }
+
+  .card-wrap{ display:flex; justify-content:center; margin-bottom: 20px; }
+
+  .grid-card{
+    position:relative;
+    width: 220px;
+    height: 220px;
+    background-color: #fffdf8;
+    border: 2px solid var(--seal);
+    border-radius: 2px;
+    background-image:
+/*
+      linear-gradient(90deg, transparent 49.4%, var(--grid) 49.4% 50.6%, transparent 50.6%),
+      linear-gradient(0deg, transparent 49.4%, var(--grid) 49.4% 50.6%, transparent 50.6%)，
+      linear-gradient(45deg, transparent 49%, var(--grid) 49% 51%, transparent 51%),
+      linear-gradient(135deg, transparent 49%, var(--grid) 49% 51%, transparent 51%);
+*/
+    background-blend-mode: multiply;
+    opacity: 0.97;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .prompt-text{
+    font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    color: var(--ink);
+    text-align:center;
+    line-height:1.15;
+    padding: 10px;
+  }
+  .prompt-text.mode-hanzi{ font-size: 4.4rem; }
+  .prompt-text.mode-pinyin{ font-size: 1.7rem; letter-spacing:0.02em; }
+  .prompt-text.mode-meaning{ font-size: 1.35rem; font-family: -apple-system, sans-serif; color: var(--ink-soft); }
+
+  .seal-stamp{
+    position:absolute;
+    top: -14px;
+    right: -14px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.6rem;
+    font-weight:700;
+    border: 3px solid;
+    opacity:0;
+    transform: scale(1.5) rotate(-12deg);
+    pointer-events:none;
+  }
+  .seal-stamp.show{
+    animation: stamp-in 0.28s ease-out forwards;
+  }
+  .seal-stamp.correct{ color: var(--success); border-color: var(--success); background: var(--success-bg); }
+  .seal-stamp.wrong{ color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
+
+  @keyframes stamp-in{
+    0%{ opacity:0; transform: scale(1.6) rotate(-12deg); }
+    70%{ opacity:1; transform: scale(0.94) rotate(-8deg); }
+    100%{ opacity:1; transform: scale(1) rotate(-8deg); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .seal-stamp.show{ animation:none; opacity:1; transform: rotate(-8deg); }
+  }
+
+  .answer-row{ display:flex; gap:10px; justify-content:center; margin-bottom: 14px; }
+  #answer-input{
+    width: 220px;
+    padding: 11px 12px;
+    font-size: 1.2rem;
+    font-family: "Noto Serif SC", "Songti SC", serif;
+    text-align:center;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fffdf8;
+    color: var(--ink);
+  }
+
+  .feedback{
+    min-height: 46px;
+    text-align:center;
+    font-size: 0.92rem;
+    margin-bottom: 14px;
+    color: var(--ink-soft);
+  }
+  .feedback strong{ color: var(--ink); }
+  .feedback.wrong-msg{ color: var(--danger); }
+  .feedback.correct-msg{ color: var(--success); }
+
+  .practice-actions{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+
+  .session-end-link{
+    text-align:center;
+    margin-top: 16px;
+  }
+  .session-end-link button{
+    background:none; border:none; color: var(--ink-soft);
+    text-decoration: underline; font-size: 0.78rem; padding:4px;
+  }
+
+  /* ---- summary ---- */
+  .stat-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat{
+    background:#fffdf8;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding: 12px 8px;
+    text-align:center;
+  }
+  .stat .num{ font-size:1.4rem; font-weight:700; color: var(--seal); font-variant-numeric: tabular-nums; }
+  .stat .lbl{ font-size:0.72rem; color: var(--ink-soft); margin-top:2px; }
+
+  table{ width:100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 18px; }
+  th, td{ text-align:left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  th{ color: var(--ink-soft); font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; }
+  td.hz{ font-family:"Noto Serif SC","Songti SC",serif; font-size:1.1rem; }
+  td.res{ text-align:center; width: 28px; }
+  .res.ok{ color: var(--success); }
+  .res.no{ color: var(--danger); }
+
+  footer{ text-align:center; margin-top: 24px; font-size: 0.72rem; color: var(--ink-soft); opacity:0.8; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>字帖 <span class="accent">·</span> Hanzi Practice</h1>
+    <p>Build your own deck, recall each entry, and keep retrying what you miss.</p>
+  </header>
+
+  <section class="panel" id="setup-panel">
+    <h2>Character bank</h2>
+    <label for="bank-input">One entry per line: <code>character, pinyin, meaning</code> (pinyin and meaning are optional)</label>
+    <textarea id="bank-input" spellcheck="false" placeholder="你好, nǐ hǎo, hello
+谢谢, xièxiè, thank you
+爱, ài, love"></textarea>
+    <div id="bank-count" class="hint">0 entries parsed</div>
+
+    <div class="row">
+      <label for="prompt-mode" style="margin:0;">Show me:</label>
+      <select id="prompt-mode">
+        <option value="hanzi">the character → type it back</option>
+        <option value="pinyin">the pinyin → recall the character</option>
+        <option value="meaning">the meaning → recall the character</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <button class="secondary" id="load-sample">Load deck (50 words)</button>
+      <button class="secondary" id="save-bank">Save bank</button>
+      <button class="primary" id="start-btn">Start practice</button>
+    </div>
+    <div class="hint" id="save-status"></div>
+  </section>
+
+  <section class="panel" id="practice-panel">
+    <div class="status-bar">
+      <span><span class="round-label" id="round-label">Round 1</span> · <span id="progress-label">1 / 10</span></span>
+      <span class="timers">
+        <span>Card: <span id="card-timer">0.0s</span></span>
+        <span>Total: <span id="total-timer">0:00</span></span>
+      </span>
+    </div>
+
+    <div class="card-wrap">
+      <div class="grid-card">
+        <div class="prompt-text" id="prompt-text"></div>
+        <div class="seal-stamp" id="seal-stamp"></div>
+      </div>
+    </div>
+
+    <div class="answer-row">
+      <input id="answer-input" type="text" autocomplete="off" autocapitalize="off" placeholder="type here" />
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="practice-actions">
+      <button class="secondary" id="idk-btn">I don't know</button>
+      <button class="secondary" id="next-btn" style="display:none;">Next →</button>
+    </div>
+
+<!--
+    <div class="session-end-link">
+      <button id="end-session-btn">end session early</button>
+    </div>
+-->
+  </section>
+
+  <section class="panel" id="summary-panel">
+    <h2 id="summary-title">Session complete</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="stat-total">0</div><div class="lbl">cards</div></div>
+      <div class="stat"><div class="num" id="stat-correct">0</div><div class="lbl">correct</div></div>
+      <div class="stat"><div class="num" id="stat-avg">0.0s</div><div class="lbl">avg time</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Character</th><th>Pinyin</th><th>Meaning</th><th>Time</th><th></th></tr></thead>
+      <tbody id="summary-table-body"></tbody>
+    </table>
+    <div class="row">
+      <button class="primary" id="retry-missed-btn">Retry missed</button>
+      <button class="secondary" id="restart-full-btn">Practice full deck again</button>
+      <button class="secondary" id="edit-bank-btn">Edit bank</button>
+    </div>
+  </section>
+
+  <footer>Runs entirely in your browser — nothing is sent anywhere. Your bank is saved locally on this device.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "hanzi-practice-bank-v1";
+
+  const bankInput = document.getElementById("bank-input");
+  const bankCount = document.getElementById("bank-count");
+  const saveStatus = document.getElementById("save-status");
+  const promptModeSelect = document.getElementById("prompt-mode");
+
+  const setupPanel = document.getElementById("setup-panel");
+  const practicePanel = document.getElementById("practice-panel");
+  const summaryPanel = document.getElementById("summary-panel");
+
+  const roundLabel = document.getElementById("round-label");
+  const progressLabel = document.getElementById("progress-label");
+  const cardTimerEl = document.getElementById("card-timer");
+  const totalTimerEl = document.getElementById("total-timer");
+
+  const promptTextEl = document.getElementById("prompt-text");
+  const sealStampEl = document.getElementById("seal-stamp");
+  const answerInput = document.getElementById("answer-input");
+  const feedbackEl = document.getElementById("feedback");
+  const idkBtn = document.getElementById("idk-btn");
+  const nextBtn = document.getElementById("next-btn");
+
+  const summaryTitle = document.getElementById("summary-title");
+  const statTotal = document.getElementById("stat-total");
+  const statCorrect = document.getElementById("stat-correct");
+  const statAvg = document.getElementById("stat-avg");
+  const summaryTableBody = document.getElementById("summary-table-body");
+
+  const SAMPLE = `拉, lā, to pull
+蛇, shé, snake
+酷, kù, cool; stylish
+前, qián, front; before
+外, wài, outside; external
+上, shàng, up; above
+下, xià, down; below
+后, hòu, back; behind; after
+内, nèi, inside; internal
+战斗, zhàn dòu, to fight; battle
+硬, yìng, hard; firm
+近, jìn, near; close
+远, yuǎn, far
+担心, dān xīn, to worry; worried
+邪恶, xié è, evil; wicked
+接, jiē, to catch; to receive
+软, ruǎn, soft
+耳朵, ěr duo, ear
+疯狂, fēng kuáng, crazy
+扔, rēng, to throw
+跑, pǎo, to run
+乖, guāi, well-behaved
+大脑, dà nǎo, brain
+聪明, cōng ming, clever; intelligent
+甜, tián, sweet
+嘴, zuǐ, mouth
+按, àn, to press (a button)
+忙, máng, busy
+酸, suān, sour
+旁边, páng biān, beside; next to
+吃惊, chī jīng, surprised; astonished
+眼睛, yǎn jing, eye
+读, dú, to read
+矮, ǎi, short (height)
+推, tuī, to push (open)
+脚, jiǎo, foot
+冷, lěng, cold
+心脏, xīn zàng, heart
+蜘蛛, zhī zhū, spider
+奇怪, qí guài, strange
+鼻子, bí zi, nose
+动物, dòng wù, animal
+更, gèng, more; even more
+饱, bǎo, full (after eating)
+蝴蝶, hú dié, butterfly
+再次, zài cì, again; once more
+生气, shēng qì, angry; to get angry
+容易, róng yì, easy
+猪, zhū, pig
+猴子, hóu zi, monkey
+其实, qí shí, actually; in fact
+生病, shēng bìng, to get sick; ill
+虚弱, xū ruò, weak; frail
+黄, huáng, yellow
+每个, měi gè, every; each
+低, dī, low
+羊, yáng, sheep; goat
+非常, fēi cháng, very; extremely
+好笑, hǎo xiào, funny; amusing
+直, zhí, straight
+更少, gèng shǎo, less; fewer
+强壮, qiáng zhuàng, strong; sturdy
+富有, fù yǒu, rich; wealthy
+骄傲, jiāo ào, proud; arrogant
+不公, bù gōng, unfair; unjust
+公平, gōng píng, fair; just
+鸭, yā, duck
+总是, zǒng shì, always
+蜜蜂, mì fēng, bee
+累, lèi, tired
+绿, lǜ, green
+已经, yǐ jīng, already
+熊, xióng, bear
+穷, qióng, poor
+健康, jiàn kāng, healthy; health
+总统, zǒng tǒng, president
+`;
+
+  let fullBank = [];
+  let queue = [];
+  let currentCard = null;
+  let cardStartTime = 0;
+  let sessionStartTime = 0;
+  let results = [];
+  let wrongMap = new Map(); // dedupe by hanzi
+  let round = 1;
+  let promptMode = "hanzi";
+  let totalTimerInterval = null;
+  let cardTimerInterval = null;
+  let awaitingNext = false;
+
+  function parseBank(text){
+    return text.split("\n")
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(line => {
+	const parts = line.split(/[,，、،]/).map(p => p.trim());
+        return {
+          hanzi: parts[0] || "",
+          pinyin: parts[1] || "",
+          meaning: parts[2] || ""
+        };
+      })
+      .filter(e => e.hanzi.length > 0);
+  }
+
+  function updateBankCount(){
+    const entries = parseBank(bankInput.value);
+    bankCount.textContent = entries.length + " entr" + (entries.length === 1 ? "y" : "ies") + " parsed";
+    return entries;
+  }
+  bankInput.addEventListener("input", updateBankCount);
+
+  document.getElementById("load-sample").addEventListener("click", () => {
+    bankInput.value = SAMPLE;
+    updateBankCount();
+  });
+
+  document.getElementById("save-bank").addEventListener("click", () => {
+    localStorage.setItem(STORAGE_KEY, bankInput.value);
+    saveStatus.textContent = "Saved locally ✓";
+    setTimeout(() => saveStatus.textContent = "", 2000);
+  });
+
+  // load saved bank on startup, falling back to the preloaded deck
+  const saved = localStorage.getItem(STORAGE_KEY);
+  bankInput.value = saved ? saved : SAMPLE;
+  updateBankCount();
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function fmtSeconds(ms){
+    return (ms / 1000).toFixed(1) + "s";
+  }
+  function fmtMMSS(ms){
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return m + ":" + String(s).padStart(2, "0");
+  }
+
+  document.getElementById("start-btn").addEventListener("click", () => {
+    const entries = updateBankCount();
+    if (entries.length === 0) {
+      bankCount.textContent = "Add at least one entry to start.";
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, bankInput.value);
+    fullBank = entries;
+    promptMode = promptModeSelect.value;
+    round = 1;
+    startSession(fullBank);
+  });
+
+  function startSession(entries){
+    queue = shuffle(entries);
+    results = [];
+    wrongMap = new Map();
+    sessionStartTime = performance.now();
+    awaitingNext = false;
+
+    setupPanel.style.display = "none";
+    summaryPanel.style.display = "none";
+    practicePanel.style.display = "block";
+
+    clearInterval(totalTimerInterval);
+    totalTimerInterval = setInterval(() => {
+      totalTimerEl.textContent = fmtMMSS(performance.now() - sessionStartTime);
+    }, 250);
+
+    nextCard();
+  }
+
+  function nextCard(){
+    if (queue.length === 0) {
+      endSession();
+      return;
+    }
+    currentCard = queue.shift();
+    cardStartTime = performance.now();
+    awaitingNext = false;
+
+    let displayText = currentCard.hanzi;
+    let modeClass = "mode-hanzi";
+    if (promptMode === "pinyin") {
+      displayText = currentCard.pinyin || "(no pinyin given — showing character)";
+      modeClass = currentCard.pinyin ? "mode-pinyin" : "mode-hanzi";
+      if (!currentCard.pinyin) displayText = currentCard.hanzi;
+    } else if (promptMode === "meaning") {
+      displayText = currentCard.meaning || "(no meaning given — showing character)";
+      modeClass = currentCard.meaning ? "mode-meaning" : "mode-hanzi";
+      if (!currentCard.meaning) displayText = currentCard.hanzi;
+    }
+    promptTextEl.className = "prompt-text " + modeClass;
+    promptTextEl.textContent = displayText;
+
+    sealStampEl.className = "seal-stamp";
+    sealStampEl.textContent = "";
+    feedbackEl.className = "feedback";
+    feedbackEl.textContent = "";
+    answerInput.value = "";
+    answerInput.disabled = false;
+    idkBtn.style.display = "inline-block";
+    idkBtn.disabled = false;
+    nextBtn.style.display = "none";
+    answerInput.focus();
+
+    const total = results.length + queue.length + 1;
+    progressLabel.textContent = (results.length + 1) + " / " + total;
+    roundLabel.textContent = "Round " + round;
+
+    clearInterval(cardTimerInterval);
+    cardTimerInterval = setInterval(() => {
+      cardTimerEl.textContent = fmtSeconds(performance.now() - cardStartTime);
+    }, 100);
+  }
+
+  function checkAnswer(forceWrong){
+    if (awaitingNext) return;
+    const userVal = answerInput.value.trim();
+    if (!forceWrong && userVal.length === 0) return;
+
+    const correct = !forceWrong && (userVal === currentCard.hanzi.trim());
+    const timeMs = performance.now() - cardStartTime;
+    clearInterval(cardTimerInterval);
+    cardTimerEl.textContent = fmtSeconds(timeMs);
+
+    results.push({
+      hanzi: currentCard.hanzi,
+      pinyin: currentCard.pinyin,
+      meaning: currentCard.meaning,
+      timeMs: timeMs,
+      correct: correct
+    });
+
+    answerInput.disabled = true;
+    awaitingNext = true;
+    idkBtn.style.display = "none";
+    nextBtn.style.display = "inline-block";
+    nextBtn.focus();
+
+    if (correct) {
+      sealStampEl.textContent = "✓";
+      sealStampEl.className = "seal-stamp correct show";
+      const pinyinText = currentCard.pinyin ? currentCard.pinyin : "(no pinyin provided)";
+      const meaningText = currentCard.meaning ? " — " + currentCard.meaning : "";
+      feedbackEl.className = "feedback correct-msg";
+      feedbackEl.innerHTML = "Correct — <strong>" + fmtSeconds(timeMs) + "</strong>" + "<br/><strong>" + currentCard.hanzi + "</strong> (" + pinyinText + ")" + meaningText;
+    } else {
+      wrongMap.set(currentCard.hanzi, currentCard);
+      sealStampEl.textContent = "✗";
+      sealStampEl.className = "seal-stamp wrong show";
+      feedbackEl.className = "feedback wrong-msg";
+      const pinyinText = currentCard.pinyin ? currentCard.pinyin : "(no pinyin provided)";
+      const meaningText = currentCard.meaning ? " — " + currentCard.meaning : "";
+      feedbackEl.innerHTML = "Correct answer: <strong>" + currentCard.hanzi + "</strong> (" + pinyinText + ")" + meaningText;
+    }
+  }
+
+  idkBtn.addEventListener("click", () => checkAnswer(true));
+  nextBtn.addEventListener("click", nextCard);
+
+  // Auto-submit as soon as the typed value matches the target — composition-safe
+  // so it doesn't fire mid-way through an IME candidate selection.
+  let composing = false;
+
+  function maybeAutoSubmit(){
+    if (awaitingNext || composing) return;
+    const val = answerInput.value.trim();
+    if (val.length > 0 && val === currentCard.hanzi.trim()) {
+      checkAnswer(false);
+    }
+  }
+
+  answerInput.addEventListener("compositionstart", () => { composing = true; });
+  answerInput.addEventListener("compositionend", () => {
+    composing = false;
+    maybeAutoSubmit();
+  });
+  answerInput.addEventListener("input", (e) => {
+    if (e.isComposing) return;
+    maybeAutoSubmit();
+  });
+
+  answerInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (awaitingNext) {
+        nextCard();
+      } else {
+        checkAnswer(false);
+      }
+    }
+  });
+
+  document.getElementById("end-session-btn").addEventListener("click", () => {
+    if (results.length === 0) {
+      // nothing answered yet, just go back
+      practicePanel.style.display = "none";
+      setupPanel.style.display = "block";
+      clearInterval(totalTimerInterval);
+      clearInterval(cardTimerInterval);
+      return;
+    }
+    endSession();
+  });
+
+  function endSession(){
+    clearInterval(totalTimerInterval);
+    clearInterval(cardTimerInterval);
+
+    practicePanel.style.display = "none";
+    summaryPanel.style.display = "block";
+
+    const total = results.length;
+    const correctCount = results.filter(r => r.correct).length;
+    const avgMs = total ? results.reduce((s, r) => s + r.timeMs, 0) / total : 0;
+
+    summaryTitle.textContent = "Round " + round + " complete";
+    statTotal.textContent = total;
+    statCorrect.textContent = correctCount + " / " + total;
+    statAvg.textContent = fmtSeconds(avgMs);
+
+    summaryTableBody.innerHTML = "";
+    results.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="hz">' + escapeHtml(r.hanzi) + '</td>' +
+        '<td>' + escapeHtml(r.pinyin || "—") + '</td>' +
+        '<td>' + escapeHtml(r.meaning || "—") + '</td>' +
+        '<td>' + fmtSeconds(r.timeMs) + '</td>' +
+        '<td class="res ' + (r.correct ? "ok" : "no") + '">' + (r.correct ? "✓" : "✗") + '</td>';
+      summaryTableBody.appendChild(tr);
+    });
+
+    const retryBtn = document.getElementById("retry-missed-btn");
+    retryBtn.textContent = "Retry missed (" + wrongMap.size + ")";
+    retryBtn.disabled = wrongMap.size === 0;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  document.getElementById("retry-missed-btn").addEventListener("click", () => {
+    if (wrongMap.size === 0) return;
+    round += 1;
+    startSession(Array.from(wrongMap.values()));
+  });
+
+  document.getElementById("restart-full-btn").addEventListener("click", () => {
+    round = 1;
+    startSession(fullBank);
+  });
+
+  document.getElementById("edit-bank-btn").addEventListener("click", () => {
+    summaryPanel.style.display = "none";
+    setupPanel.style.display = "block";
+  });
+
+})();
+</script>
+</body>
+</html>
