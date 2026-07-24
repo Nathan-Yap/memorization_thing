@@ -1,0 +1,35 @@
+一百，Yībǎi，one hundred
+一千, Yīqiān, one thousand
+一万, Wàn, ten thousand
+一百万，Yībǎi wàn, one million
+裙子, Qúnzǐ, dress/skirt
+球，Qiú，ball
+队，Duì，team
+一起，Yīqǐ，together
+其他，Qítā，other
+没关系，Méiguānxì，it doesn't matter
+干杯, Gānbēi, cheers
+放松, Fàngsōng, relax
+我同意, Wǒ tóngyì, I agree
+欢迎, Huānyíng, welcome
+不用谢, Bùyòng xiè, no worries/you're welcome
+向右转, Xiàng yòu zhuǎn, turn right
+向左转, Xiàng zuǒ zhuǎn, turn left
+直走, Zhí zǒu, go straight
+跟我来, Gēn wǒ lái, come with me
+鸡蛋, Jīdàn, chicken egg
+奶酪, Nǎilào, cheese
+牛奶, Niúnǎi, milk
+鱼, Yú, fish (to eat)
+肉, Ròu, meat
+蔬菜, Shūcài, vegetable
+水果, Shuǐguǒ, fruit
+骨头, Gǔtou, bone (in food)
+油, Yóu, oil
+面包, Miànbāo, bread
+糖, Táng, sugar
+巧克力, Qiǎokèlì, chocolate
+糖果, Tángguǒ, candy
+蛋糕, Dàngāo, cake
+饮料, Yǐnliào, drinks
+苏打水, Sūdǎ shuǐ, soda (water)
