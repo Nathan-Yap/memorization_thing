@@ -1080,7 +1080,7 @@
       }
     }
   });
-
+/*
   document.getElementById("end-session-btn").addEventListener("click", () => {
     if (results.length === 0) {
       // nothing answered yet, just go back
@@ -1092,7 +1092,7 @@
     }
     endSession();
   });
-
+*/
   function endSession(){
     clearInterval(totalTimerInterval);
     clearInterval(cardTimerInterval);
@@ -1144,6 +1144,7 @@
   });
 
   document.getElementById("edit-bank-btn").addEventListener("click", () => {
+	console.log("CLICK EVENT BANK BTN");
     summaryPanel.style.display = "none";
     setupPanel.style.display = "block";
   });
