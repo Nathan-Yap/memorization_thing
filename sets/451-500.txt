@@ -2,7 +2,6 @@
 秋天, qiū tiān, autumn
 冬天, dōng tiān, winter
 夏天, xià tiān, summer
-警察, jǐng chá, police
 地图, dì tú, map
 账单, zhàng dān, bill
 洗手间, xǐ shǒu jiān, restroom
@@ -20,7 +19,6 @@
 厕所, cè suǒ, toilet (public)
 公寓, gōng yù, apartment
 建筑, jiàn zhù, building
-健康, jiàn kāng, health
 大学, dà xué, university
 预约, yù yuē, appointment
 意外, yì wài, accident
